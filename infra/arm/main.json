@@ -1,0 +1,207 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "M2DevCloud - Provisions Service Bus (+ DLQ), SignalR, Function App and supporting Storage + App Insights. Cosmos DB and the existing FastAPI/storage account are kept outside of this template on purpose so they are not overwritten."
+  },
+  "parameters": {
+    "baseName": {
+      "type": "string",
+      "defaultValue": "m2devcloud",
+      "metadata": { "description": "Lowercase base name used to derive resource names." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "cosmosEndpoint": {
+      "type": "string",
+      "metadata": { "description": "Existing Cosmos DB endpoint URL." }
+    },
+    "cosmosKey": {
+      "type": "securestring",
+      "metadata": { "description": "Existing Cosmos DB primary key." }
+    },
+    "cosmosDatabase": {
+      "type": "string",
+      "defaultValue": "db-doc"
+    },
+    "cosmosContainer": {
+      "type": "string",
+      "defaultValue": "jobs"
+    },
+    "blobConnectionString": {
+      "type": "securestring",
+      "metadata": { "description": "Connection string of the existing Storage Account where documents are uploaded (the one already used by the FastAPI service)." }
+    },
+    "blobContainer": {
+      "type": "string",
+      "defaultValue": "documents",
+      "metadata": { "description": "Name of the blob container that receives the input/{id}/{file} uploads." }
+    },
+    "azureOpenAiEndpoint": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "azureOpenAiKey": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "azureOpenAiDeployment": {
+      "type": "string",
+      "defaultValue": "gpt-4o-mini"
+    },
+    "azureOpenAiApiVersion": {
+      "type": "string",
+      "defaultValue": "2024-06-01"
+    },
+    "serviceBusMaxDeliveryCount": {
+      "type": "int",
+      "defaultValue": 3,
+      "metadata": { "description": "After this number of failed deliveries the message is dead-lettered." }
+    }
+  },
+  "variables": {
+    "functionStorageName": "[toLower(concat(parameters('baseName'), 'fnst', uniqueString(resourceGroup().id)))]",
+    "serviceBusName":      "[concat(parameters('baseName'), '-sb-', uniqueString(resourceGroup().id))]",
+    "queueName":           "documents-queue",
+    "signalRName":         "[concat(parameters('baseName'), '-signalr-', uniqueString(resourceGroup().id))]",
+    "appInsightsName":     "[concat(parameters('baseName'), '-ai')]",
+    "planName":            "[concat(parameters('baseName'), '-plan')]",
+    "functionAppName":     "[concat(parameters('baseName'), '-fn-', uniqueString(resourceGroup().id))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('functionStorageName')]",
+      "location": "[parameters('location')]",
+      "kind": "StorageV2",
+      "sku": { "name": "Standard_LRS" },
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "supportsHttpsTrafficOnly": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "Request_Source": "rest"
+      }
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces",
+      "apiVersion": "2022-10-01-preview",
+      "name": "[variables('serviceBusName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Standard", "tier": "Standard" },
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces/queues",
+      "apiVersion": "2022-10-01-preview",
+      "name": "[concat(variables('serviceBusName'), '/', variables('queueName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ServiceBus/namespaces', variables('serviceBusName'))]"
+      ],
+      "properties": {
+        "lockDuration": "PT1M",
+        "maxDeliveryCount": "[parameters('serviceBusMaxDeliveryCount')]",
+        "deadLetteringOnMessageExpiration": true,
+        "defaultMessageTimeToLive": "P14D",
+        "enablePartitioning": false,
+        "requiresDuplicateDetection": false,
+        "requiresSession": false
+      }
+    },
+    {
+      "type": "Microsoft.SignalRService/SignalR",
+      "apiVersion": "2023-02-01",
+      "name": "[variables('signalRName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Free_F1", "tier": "Free", "capacity": 1 },
+      "kind": "SignalR",
+      "properties": {
+        "features": [
+          { "flag": "ServiceMode",      "value": "Serverless" },
+          { "flag": "EnableConnectivityLogs", "value": "true" },
+          { "flag": "EnableMessagingLogs",    "value": "false" }
+        ],
+        "cors": {
+          "allowedOrigins": [ "*" ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2023-12-01",
+      "name": "[variables('planName')]",
+      "location": "[parameters('location')]",
+      "kind": "linux",
+      "sku": { "name": "Y1", "tier": "Dynamic" },
+      "properties": { "reserved": true }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-12-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp,linux",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.ServiceBus/namespaces', variables('serviceBusName'))]",
+        "[resourceId('Microsoft.SignalRService/SignalR', variables('signalRName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "linuxFxVersion": "NODE|20",
+          "ftpsState": "Disabled",
+          "cors": { "allowedOrigins": [ "*" ], "supportCredentials": false },
+          "appSettings": [
+            { "name": "FUNCTIONS_EXTENSION_VERSION",      "value": "~4" },
+            { "name": "FUNCTIONS_WORKER_RUNTIME",         "value": "node" },
+            { "name": "WEBSITE_NODE_DEFAULT_VERSION",     "value": "~20" },
+            { "name": "AzureWebJobsStorage",              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageName')), '2023-05-01').keys[0].value, ';EndpointSuffix=core.windows.net')]" },
+            { "name": "APPLICATIONINSIGHTS_CONNECTION_STRING", "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).ConnectionString]" },
+
+            { "name": "BLOB_CONNECTION_STRING",           "value": "[parameters('blobConnectionString')]" },
+            { "name": "BLOB_CONTAINER",                   "value": "[parameters('blobContainer')]" },
+
+            { "name": "SERVICE_BUS_CONNECTION_STRING",    "value": "[listKeys(resourceId('Microsoft.ServiceBus/namespaces/AuthorizationRules', variables('serviceBusName'), 'RootManageSharedAccessKey'), '2022-10-01-preview').primaryConnectionString]" },
+            { "name": "SERVICE_BUS_QUEUE",                "value": "[variables('queueName')]" },
+
+            { "name": "AzureSignalRConnectionString",     "value": "[listKeys(resourceId('Microsoft.SignalRService/SignalR', variables('signalRName')), '2023-02-01').primaryConnectionString]" },
+            { "name": "SIGNALR_HUB_NAME",                 "value": "documents" },
+
+            { "name": "COSMOS_ENDPOINT",                  "value": "[parameters('cosmosEndpoint')]" },
+            { "name": "COSMOS_KEY",                       "value": "[parameters('cosmosKey')]" },
+            { "name": "COSMOS_DATABASE",                  "value": "[parameters('cosmosDatabase')]" },
+            { "name": "COSMOS_CONTAINER",                 "value": "[parameters('cosmosContainer')]" },
+
+            { "name": "AZURE_OPENAI_ENDPOINT",            "value": "[parameters('azureOpenAiEndpoint')]" },
+            { "name": "AZURE_OPENAI_KEY",                 "value": "[parameters('azureOpenAiKey')]" },
+            { "name": "AZURE_OPENAI_DEPLOYMENT",          "value": "[parameters('azureOpenAiDeployment')]" },
+            { "name": "AZURE_OPENAI_API_VERSION",         "value": "[parameters('azureOpenAiApiVersion')]" }
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "functionAppName":  { "type": "string", "value": "[variables('functionAppName')]" },
+    "functionAppUrl":   { "type": "string", "value": "[concat('https://', variables('functionAppName'), '.azurewebsites.net')]" },
+    "serviceBusName":   { "type": "string", "value": "[variables('serviceBusName')]" },
+    "serviceBusQueue":  { "type": "string", "value": "[variables('queueName')]" },
+    "signalRName":      { "type": "string", "value": "[variables('signalRName')]" }
+  }
+}

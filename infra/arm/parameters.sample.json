@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "baseName": { "value": "m2devcloud" },
+    "location": { "value": "francecentral" },
+
+    "cosmosEndpoint":     { "value": "https://<your-cosmos-account>.documents.azure.com:443/" },
+    "cosmosKey":          { "value": "<replace-or-pass-via-cli>" },
+    "cosmosDatabase":     { "value": "db-doc" },
+    "cosmosContainer":    { "value": "jobs" },
+
+    "blobConnectionString": { "value": "DefaultEndpointsProtocol=https;AccountName=<storageaccount>;AccountKey=<key>;EndpointSuffix=core.windows.net" },
+    "blobContainer":        { "value": "documents" },
+
+    "azureOpenAiEndpoint":   { "value": "https://<aoai>.openai.azure.com/" },
+    "azureOpenAiKey":        { "value": "<replace>" },
+    "azureOpenAiDeployment": { "value": "gpt-4o-mini" },
+    "azureOpenAiApiVersion": { "value": "2024-06-01" },
+
+    "serviceBusMaxDeliveryCount": { "value": 3 }
+  }
+}

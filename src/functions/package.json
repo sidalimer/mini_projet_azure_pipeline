@@ -1,0 +1,20 @@
+{
+  "name": "m2devcloud-functions",
+  "version": "1.0.0",
+  "description": "Azure Functions (Node.js v4) - Pipeline asynchrone de traitement de documents (Blob Trigger, Service Bus, DLQ, SignalR, Azure OpenAI tagging).",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "start": "func start",
+    "build": "echo 'No build step (pure JS)'",
+    "test": "echo \"No tests\" && exit 0"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.2.0",
+    "@azure/functions": "^4.7.0",
+    "@azure/service-bus": "^7.9.5",
+    "openai": "^4.65.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

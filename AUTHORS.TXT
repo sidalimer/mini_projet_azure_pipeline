@@ -1,0 +1,19 @@
+Groupe : <NOM_DU_GROUPE>
+
+Membres :
+<Prénom1> <Nom1>
+<Prénom2> <Nom2>
+
+Responsabilités :
+
+<Prénom1> <Nom1>
+  - Azure Functions Node.js v4 (Blob Trigger, Service Bus, DLQ, negotiate)
+  - Module de tagging IA (Azure OpenAI + fallback règles)
+  - Configuration Service Bus + DLQ (ARM)
+  - Tests manuels du pipeline
+
+<Prénom2> <Nom2>
+  - Frontend React (intégration SignalR temps réel, composants)
+  - Pipeline GitLab CI/CD (.gitlab-ci.yml)
+  - Template ARM (Service Bus, SignalR, Function App, App Insights)
+  - Documentation (README, schéma architecture)

@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>M2DevCloud — Soutenance</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css" id="theme">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+
+  <style>
+    :root {
+      --azure-blue: #0078d4;
+      --azure-cyan: #50e6ff;
+      --azure-purple: #8661c5;
+      --ok: #6fcf97;
+      --warn: #f2c94c;
+      --err:  #eb5757;
+    }
+    .reveal { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; }
+    .reveal h1, .reveal h2, .reveal h3 {
+      color: var(--azure-cyan);
+      text-transform: none;
+      letter-spacing: -0.02em;
+    }
+    .reveal h1 { font-size: 2.4em; }
+    .reveal h2 { font-size: 1.8em; }
+    .reveal h3 { font-size: 1.3em; }
+    .reveal p, .reveal li { font-size: 0.78em; line-height: 1.5; }
+    .reveal code { color: var(--azure-cyan); background: rgba(80,230,255,0.08); padding: 0 6px; border-radius: 4px; }
+    .reveal pre { font-size: 0.55em; box-shadow: 0 4px 18px rgba(0,0,0,0.45); }
+    .reveal pre code { padding: 18px; max-height: 520px; }
+
+    .reveal table { font-size: 0.65em; margin: 0 auto; border-collapse: collapse; }
+    .reveal table th, .reveal table td { border: 1px solid #444; padding: 8px 14px; }
+    .reveal table th { background: rgba(80,230,255,0.12); color: var(--azure-cyan); }
+
+    .cover {
+      background:
+        radial-gradient(circle at 20% 30%, rgba(0,120,212,0.35) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(134,97,197,0.35) 0%, transparent 50%);
+    }
+    .cover h1 { font-size: 2.8em; line-height: 1.05; margin-bottom: 0.4em; }
+    .cover .subtitle { color: #ddd; font-size: 1.1em; }
+    .cover .group { margin-top: 1.5em; font-size: 0.9em; color: #aaa; }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 0.7em;
+      font-weight: 600;
+      margin: 2px;
+    }
+    .pill-created   { background: #555; color: #fff; }
+    .pill-uploaded  { background: #0078d4; color: #fff; }
+    .pill-queued    { background: #f2c94c; color: #1a1a1a; }
+    .pill-processing{ background: #f2994a; color: #1a1a1a; }
+    .pill-processed { background: var(--ok); color: #1a1a1a; }
+    .pill-error     { background: var(--err); color: #fff; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      align-items: start;
+    }
+    .grid-2 .col { font-size: 0.8em; }
+    .grid-2 ul { margin: 0; }
+
+    .arch-diagram {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.5em;
+      text-align: left;
+      background: rgba(255,255,255,0.04);
+      padding: 22px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      line-height: 1.6;
+      white-space: pre;
+      overflow: auto;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(0,120,212,0.18);
+      border: 1px solid var(--azure-blue);
+      color: var(--azure-cyan);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.7em;
+      margin: 4px;
+    }
+
+    .small { font-size: 0.7em; color: #bbb; }
+
+    .footer {
+      position: absolute;
+      bottom: 12px;
+      right: 24px;
+      font-size: 0.45em;
+      color: #666;
+    }
+
+    .reveal section { text-align: left; }
+    .reveal section.center { text-align: center; }
+
+    ul.checks li { list-style: none; position: relative; padding-left: 24px; margin-bottom: 6px; }
+    ul.checks li::before { content: "✓"; color: var(--ok); position: absolute; left: 0; font-weight: bold; }
+
+    .kpi { display:flex; gap:20px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+    .kpi .item {
+      background: rgba(255,255,255,0.05);
+      border-left: 4px solid var(--azure-cyan);
+      padding: 14px 22px;
+      border-radius: 6px;
+      min-width: 150px;
+    }
+    .kpi .num { font-size: 2em; color: var(--azure-cyan); font-weight: bold; display:block; }
+    .kpi .lbl { font-size: 0.65em; color: #bbb; }
+  </style>
+</head>
+<body>
+
+<div class="reveal">
+<div class="slides">
+
+<!-- =========================================================================
+     SLIDE 1 / 11 — COUVERTURE
+========================================================================== -->
+<section class="cover center">
+  <h1>Pipeline cloud asynchrone<br>avec IA, notifications &amp; DLQ</h1>
+  <p class="subtitle">Mini-projet M2 DevCloud</p>
+
+  <div class="kpi">
+    <div class="item"><span class="num">3</span><span class="lbl">Azure Functions</span></div>
+    <div class="item"><span class="num">6</span><span class="lbl">États métier</span></div>
+    <div class="item"><span class="num">100%</span><span class="lbl">CI/CD auto</span></div>
+  </div>
+
+  <div class="group">
+    Groupe <strong>&lt;NOM_GROUPE&gt;</strong> — &lt;Prénom Nom&gt; &amp; &lt;Prénom Nom&gt;
+  </div>
+
+  <div class="footer">1 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 2 / 11 — CONTEXTE & PROBLÈME
+========================================================================== -->
+<section>
+  <h2>Contexte &amp; problème</h2>
+
+  <div class="grid-2">
+    <div class="col">
+      <h3>Acquis du cours</h3>
+      <ul class="checks">
+        <li>Frontend React</li>
+        <li>API FastAPI <code>POST /jobs</code></li>
+        <li>Cosmos DB (statut <code>CREATED</code>)</li>
+        <li>URL SAS + upload Blob</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>Notre périmètre</h3>
+      <p style="color: var(--azure-cyan);"><strong>Tout ce qui se passe après l'upload.</strong></p>
+      <ul>
+        <li>Traitement <strong>asynchrone</strong></li>
+        <li>Notifications <strong>temps réel</strong></li>
+        <li><strong>Résilience</strong> (retries + DLQ)</li>
+        <li>Tagging par <strong>IA</strong></li>
+        <li>Déploiement <strong>automatisé</strong> GitLab</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">2 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 3 / 11 — ARCHITECTURE
+========================================================================== -->
+<section>
+  <h2>Architecture cible</h2>
+
+  <div class="arch-diagram">
+   React  ──POST /jobs──►  FastAPI  ──CREATED──►  Cosmos DB
+     │     ◄──SAS URL──        │
+     │                         ▼
+     └──PUT file──►   Blob Storage (input/{id}/{file})
+                            │
+                            │ (Blob Trigger)
+                            ▼
+               ┌──► blobTriggerUploaded ──► Service Bus ──┐
+               │      │  UPLOADED / QUEUED               │
+               │      └──► SignalR ──► React             │
+               │                                          │
+               │                                          ▼
+               │                              ┌── processDocument ──► Azure OpenAI
+               │                              │  PROCESSING / PROCESSED
+               │                              ├──► Cosmos DB
+               │                              └──► SignalR ──► React
+               │                                          │
+               │                                          │ 3 retries
+               │                                          ▼
+               │                                Dead Letter Queue
+               │                                          │
+               │                                          ▼
+               │                                    dlqAlert ──► Cosmos (ERROR)
+               │                                          └──► SignalR ──► React
+  </div>
+
+  <p class="small" style="text-align:center; margin-top:15px;">
+    🔵 Synchrone (cours) &nbsp;·&nbsp; 🟣 Événementiel (Functions) &nbsp;·&nbsp; 🟢 Temps réel (SignalR)
+  </p>
+
+  <div class="footer">3 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 4 / 11 — ÉTATS MÉTIER & CONTRAT
+========================================================================== -->
+<section>
+  <h2>États métier &amp; notifications</h2>
+
+  <div style="text-align:center; margin-bottom: 20px;">
+    <span class="pill pill-created">CREATED</span> →
+    <span class="pill pill-uploaded">UPLOADED</span> →
+    <span class="pill pill-queued">QUEUED</span> →
+    <span class="pill pill-processing">PROCESSING</span> →
+    <span class="pill pill-processed">PROCESSED</span><br>
+    <span class="small">↘</span> <span class="pill pill-error">ERROR</span>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>État</th><th>Émis par</th><th>Notification SignalR</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>CREATED</td><td>FastAPI</td><td>—</td></tr>
+      <tr><td>UPLOADED</td><td>Blob Trigger</td><td>« Fichier reçu »</td></tr>
+      <tr><td>QUEUED</td><td>Blob Trigger</td><td>« Mis en file »</td></tr>
+      <tr><td>PROCESSING</td><td>processDocument</td><td>« Traitement IA en cours »</td></tr>
+      <tr><td>PROCESSED</td><td>processDocument</td><td>« Tagging terminé » + tags</td></tr>
+      <tr><td>ERROR</td><td>processDocument / dlqAlert</td><td>« Erreur de traitement »</td></tr>
+    </tbody>
+  </table>
+
+  <p class="small" style="text-align:center; margin-top:15px;">
+    Contrat unique <code>documentUpdate</code> ⇒ côté React, <strong>un seul handler</strong> qui filtre par <code>documentId</code>.
+  </p>
+
+  <div class="footer">4 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 5 / 11 — BLOB TRIGGER FUNCTION
+========================================================================== -->
+<section>
+  <h2>Function #1 — Blob Trigger</h2>
+
+  <pre><code class="language-javascript" data-trim>
+app.storageBlob('blobTriggerUploaded', {
+  path: '%BLOB_CONTAINER%/input/{documentId}/{fileName}',
+  connection: 'BLOB_CONNECTION_STRING',
+  extraOutputs: [signalRMessages],
+  handler: async (blob, context) => {
+    const { documentId, fileName } = context.triggerMetadata;
+
+    // 1. garde-fous : fichier vide / doc inexistant -> ERROR
+    // 2. patch UPLOADED  (Cosmos)
+    // 3. sendMessage(Service Bus, { documentId, fileName, blobName, size })
+    // 4. patch QUEUED    (Cosmos)
+    // 5. push notifications SignalR : UPLOADED + QUEUED
+  }
+});
+  </code></pre>
+
+  <p class="small">
+    Le pattern <code>{documentId}/{fileName}</code> permet d'extraire l'ID directement depuis le chemin du blob — aucun appel supplémentaire requis.
+  </p>
+
+  <div class="footer">5 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 6 / 11 — SERVICE BUS + DLQ
+========================================================================== -->
+<section>
+  <h2>Service Bus + Dead Letter Queue</h2>
+
+  <div class="grid-2">
+    <div class="col">
+      <h3>Config ARM</h3>
+      <pre><code class="language-json" data-trim>
+{
+  "maxDeliveryCount": 3,
+  "deadLetteringOnMessageExpiration": true,
+  "defaultMessageTimeToLive": "P14D",
+  "lockDuration": "PT1M"
+}
+      </code></pre>
+    </div>
+    <div class="col">
+      <h3>Mécanique</h3>
+      <ul>
+        <li>Notre code <strong>throw</strong> en cas d'erreur</li>
+        <li>Service Bus relivre <strong>3 fois</strong></li>
+        <li>4ème échec → message en <code>$DeadLetterQueue</code> automatiquement</li>
+        <li><strong>Zéro code custom</strong> pour la DLQ : c'est le broker qui gère</li>
+      </ul>
+      <p class="badge">Queue : <code>documents-queue</code></p>
+    </div>
+  </div>
+
+  <div class="footer">6 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 7 / 11 — TAGGING IA
+========================================================================== -->
+<section>
+  <h2>Function #2 — Tagging IA</h2>
+
+  <div class="grid-2">
+    <div class="col">
+      <h3>Prompt envoyé</h3>
+      <pre><code data-trim>
+Analyse le nom de fichier suivant et
+génère entre 3 et 8 tags courts en français.
+
+Nom du fichier : cv_amine_azure.pdf
+
+Retourne uniquement un tableau JSON de chaînes.
+      </code></pre>
+
+      <h3>Réponse</h3>
+      <pre><code class="language-json" data-trim>
+["cv", "rh", "azure", "cloud", "pdf"]
+      </code></pre>
+    </div>
+    <div class="col">
+      <h3>Pipeline</h3>
+      <ol style="font-size:0.85em;">
+        <li>Validation du message (sinon throw → DLQ)</li>
+        <li>Cosmos : <code>PROCESSING</code></li>
+        <li>SignalR : « Traitement IA en cours »</li>
+        <li><strong>Azure OpenAI</strong> (GPT-4o-mini)</li>
+        <li>Fallback règles si échec IA ✓ <em>autorisé</em></li>
+        <li>Cosmos : <code>PROCESSED</code> + tags</li>
+        <li>SignalR : « Tagging terminé » + tags</li>
+      </ol>
+      <p class="badge">SDK : <code>openai</code> (AzureOpenAI)</p>
+    </div>
+  </div>
+
+  <div class="footer">7 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 8 / 11 — DLQ ALERT FUNCTION
+========================================================================== -->
+<section>
+  <h2>Function #3 — DLQ Alert</h2>
+
+  <pre><code class="language-javascript" data-trim>
+app.serviceBusQueue('dlqAlert', {
+  queueName: '%SERVICE_BUS_QUEUE%/$DeadLetterQueue',
+  connection: 'SERVICE_BUS_CONNECTION_STRING',
+  extraOutputs: [signalRMessages],
+  handler: async (message, context) => {
+    const reason = context.triggerMetadata?.deadLetterReason;
+    const desc   = context.triggerMetadata?.deadLetterErrorDescription;
+
+    await patchDocument(documentId, {
+      status: 'ERROR',
+      errorMessage: `${reason}: ${desc}`,
+      errorAt: new Date().toISOString()
+    });
+
+    context.extraOutputs.set(signalRMessages, buildSignalRMessage({
+      documentId, status: 'ERROR', message: 'Erreur de traitement (DLQ)'
+    }));
+  }
+});
+  </code></pre>
+
+  <p class="small">
+    <strong>Filet de sécurité ultime :</strong> aucun message ne tombe dans le vide. Cosmos est mis à jour avec le motif détaillé du broker, l'UI affiche un badge rouge en temps réel.
+  </p>
+
+  <div class="footer">8 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 9 / 11 — SIGNALR TEMPS RÉEL
+========================================================================== -->
+<section>
+  <h2>Notifications SignalR temps réel</h2>
+
+  <div class="grid-2">
+    <div class="col">
+      <h3>Côté Functions</h3>
+      <pre><code class="language-javascript" data-trim>
+const signalRMessages = output.generic({
+  type: 'signalR',
+  name: 'signalRMessages',
+  hubName: 'documents',
+  connectionStringSetting:
+    'AzureSignalRConnectionString'
+});
+
+context.extraOutputs.set(
+  signalRMessages,
+  [{ target: 'documentUpdate',
+     arguments: [payload] }]
+);
+      </code></pre>
+    </div>
+    <div class="col">
+      <h3>Côté React</h3>
+      <pre><code class="language-javascript" data-trim>
+const conn = new HubConnectionBuilder()
+  .withUrl(`${FN_URL}/api`)
+  .withAutomaticReconnect()
+  .build();
+
+conn.on('documentUpdate', (evt) => {
+  if (evt.documentId !== currentId) return;
+  setJob(prev => ({
+    ...prev,
+    status: evt.status,
+    tags:   evt.tags ?? prev.tags
+  }));
+});
+
+await conn.start();
+      </code></pre>
+    </div>
+  </div>
+
+  <p class="small" style="text-align:center;">
+    SignalR Service en mode <strong>Serverless</strong> (requis pour le binding) — Hub <code>documents</code>, event <code>documentUpdate</code>.
+  </p>
+
+  <div class="footer">9 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 10 / 11 — CI/CD GITLAB
+========================================================================== -->
+<section>
+  <h2>Déploiement GitLab CI/CD</h2>
+
+  <div class="arch-diagram" style="font-size: 0.55em;">
+  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────────┐
+  │ install  │ ─► │   lint   │ ─► │  build   │ ─► │   deploy     │
+  │ npm ci   │    │  ESLint  │    │ vite +   │    │ Functions +  │
+  │ ×2       │    │          │    │ zip Fns  │    │ Static Web   │
+  └──────────┘    └──────────┘    └──────────┘    └──────────────┘
+                                                          ▲
+                                                   branche main only
+  </div>
+
+  <div class="grid-2" style="margin-top:20px;">
+    <div class="col">
+      <h3>Variables GitLab CI/CD</h3>
+      <ul style="font-size:0.75em;">
+        <li><code>AZURE_CLIENT_ID</code> / <code>_SECRET</code> 🔒</li>
+        <li><code>AZURE_TENANT_ID</code> / <code>_SUBSCRIPTION_ID</code></li>
+        <li><code>AZURE_RESOURCE_GROUP</code></li>
+        <li><code>AZURE_FUNCTION_APP_NAME</code></li>
+        <li><code>AZURE_STATIC_WEB_APP_TOKEN</code> 🔒</li>
+        <li><code>VITE_API_BASE_URL</code> / <code>_FUNCTIONS_BASE_URL</code></li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>Sécurité</h3>
+      <ul class="checks">
+        <li>Aucun secret commité</li>
+        <li>Variables <strong>masquées</strong> côté GitLab</li>
+        <li>App Settings Azure posés via ARM</li>
+        <li><code>httpsOnly = true</code> sur la Function App</li>
+        <li>SAS Blob : 15 min, write+create seulement</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">10 / 11</div>
+</section>
+
+<!-- =========================================================================
+     SLIDE 11 / 11 — DÉMO & BILAN
+========================================================================== -->
+<section>
+  <h2>Démo &amp; bilan</h2>
+
+  <div class="grid-2">
+    <div class="col">
+      <h3>3 scénarios de démo</h3>
+      <ol>
+        <li><strong>Nominal</strong> — <code>cv_amine_azure.pdf</code><br>
+          <span class="small">badges live + tags IA</span>
+        </li>
+        <li><strong>Fichier vide</strong> — <code>empty.pdf</code><br>
+          <span class="small">ERROR direct (court-circuit)</span>
+        </li>
+        <li><strong>DLQ</strong> — message JSON invalide<br>
+          <span class="small">3 retries → DLQ → dlqAlert</span>
+        </li>
+      </ol>
+    </div>
+    <div class="col">
+      <h3>Couverture barème</h3>
+      <table style="font-size: 0.55em;">
+        <tr><td>Service Bus</td><td>3/3 ✓</td></tr>
+        <tr><td>Function traitement</td><td>4/4 ✓</td></tr>
+        <tr><td>Tagging IA</td><td>4/4 ✓</td></tr>
+        <tr><td>Notifications</td><td>4/4 ✓</td></tr>
+        <tr><td>DLQ</td><td>3/3 ✓</td></tr>
+        <tr><td>Code / README</td><td>1/1 ✓</td></tr>
+        <tr><th>Total visé</th><th>19 / 20</th></tr>
+      </table>
+    </div>
+  </div>
+
+  <p style="text-align:center; margin-top: 30px; font-size: 1.2em; color: var(--azure-cyan);">
+    <strong>Merci — Questions ?</strong>
+  </p>
+
+  <div class="footer">11 / 11</div>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: false,
+    controls: true,
+    progress: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    width: 1280,
+    height: 800,
+    margin: 0.06,
+    plugins: [ RevealHighlight, RevealNotes ]
+  });
+</script>
+
+</body>
+</html>

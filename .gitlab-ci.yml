@@ -1,0 +1,167 @@
+# =============================================================================
+# GitLab CI/CD - M2DevCloud
+# Stages:
+#   1. install   : install npm dependencies for functions and web
+#   2. lint      : lint the React project
+#   3. build     : build the React production bundle
+#   4. deploy    : deploy Azure Functions and React (Static Web Apps)
+#
+# Required GitLab CI/CD variables (Settings > CI/CD > Variables):
+#   AZURE_CLIENT_ID
+#   AZURE_CLIENT_SECRET           (masked)
+#   AZURE_TENANT_ID
+#   AZURE_SUBSCRIPTION_ID
+#   AZURE_RESOURCE_GROUP
+#   AZURE_FUNCTION_APP_NAME
+#   AZURE_STATIC_WEB_APP_TOKEN    (masked)
+#   VITE_API_BASE_URL             (URL of the existing FastAPI service)
+#   VITE_FUNCTIONS_BASE_URL       (https://<AZURE_FUNCTION_APP_NAME>.azurewebsites.net)
+# Secrets injected on the Function App as app settings (already set by the
+# ARM template; the deploy job can also re-apply them if needed):
+#   COSMOS_ENDPOINT, COSMOS_KEY
+#   SERVICE_BUS_CONNECTION_STRING
+#   SIGNALR_CONNECTION_STRING (== AzureSignalRConnectionString)
+#   AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, AZURE_OPENAI_DEPLOYMENT
+# =============================================================================
+
+stages:
+  - install
+  - lint
+  - build
+  - deploy
+
+default:
+  tags: [] # use shared runners by default
+
+# -----------------------------------------------------------------------------
+# Reusable templates
+# -----------------------------------------------------------------------------
+.node:
+  image: node:20-alpine
+  cache:
+    key:
+      files:
+        - src/functions/package-lock.json
+        - src/web/package-lock.json
+    paths:
+      - src/functions/node_modules/
+      - src/web/node_modules/
+
+.azure:
+  image: mcr.microsoft.com/azure-cli:latest
+  before_script:
+    - az login --service-principal
+        -u "$AZURE_CLIENT_ID"
+        -p "$AZURE_CLIENT_SECRET"
+        --tenant "$AZURE_TENANT_ID"
+    - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+# -----------------------------------------------------------------------------
+# 1. INSTALL
+# -----------------------------------------------------------------------------
+install:functions:
+  extends: .node
+  stage: install
+  script:
+    - cd src/functions
+    - npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - src/functions/node_modules/
+
+install:web:
+  extends: .node
+  stage: install
+  script:
+    - cd src/web
+    - npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - src/web/node_modules/
+
+# -----------------------------------------------------------------------------
+# 2. LINT
+# -----------------------------------------------------------------------------
+lint:web:
+  extends: .node
+  stage: lint
+  needs: [install:web]
+  script:
+    - cd src/web
+    - npm run lint
+  allow_failure: true
+
+# -----------------------------------------------------------------------------
+# 3. BUILD
+# -----------------------------------------------------------------------------
+build:web:
+  extends: .node
+  stage: build
+  needs: [install:web]
+  script:
+    - cd src/web
+    - |
+      cat > .env.production <<EOF
+      VITE_API_BASE_URL=${VITE_API_BASE_URL}
+      VITE_FUNCTIONS_BASE_URL=${VITE_FUNCTIONS_BASE_URL}
+      EOF
+    - npm run build
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - src/web/dist/
+
+# Package the Azure Functions code (without node_modules; the Function App
+# will reinstall dependencies during the remote build).
+build:functions:
+  extends: .node
+  stage: build
+  needs: [install:functions]
+  script:
+    - apk add --no-cache zip
+    - cd src/functions
+    - zip -r ../../functions.zip . -x "node_modules/*" "local.settings.json"
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - functions.zip
+
+# -----------------------------------------------------------------------------
+# 4. DEPLOY
+# -----------------------------------------------------------------------------
+deploy:functions:
+  extends: .azure
+  stage: deploy
+  needs: [build:functions]
+  only:
+    - main
+  script:
+    # Enable remote build so Oryx installs npm dependencies on the server.
+    - az functionapp config appsettings set
+        --resource-group "$AZURE_RESOURCE_GROUP"
+        --name "$AZURE_FUNCTION_APP_NAME"
+        --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+                   ENABLE_ORYX_BUILD=true
+    - az functionapp deployment source config-zip
+        --resource-group "$AZURE_RESOURCE_GROUP"
+        --name "$AZURE_FUNCTION_APP_NAME"
+        --src functions.zip
+    - az functionapp restart
+        --resource-group "$AZURE_RESOURCE_GROUP"
+        --name "$AZURE_FUNCTION_APP_NAME"
+
+deploy:web:
+  image: node:20-alpine
+  stage: deploy
+  needs: [build:web]
+  only:
+    - main
+  before_script:
+    - npm install -g @azure/static-web-apps-cli
+  script:
+    - cd src/web
+    - swa deploy ./dist
+        --deployment-token "$AZURE_STATIC_WEB_APP_TOKEN"
+        --env production
