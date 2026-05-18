@@ -9,6 +9,22 @@ est conservée telle quelle. Ce mini-projet ajoute **tout ce qui se passe après
 
 ---
 
+## 0. Déploiement live (production Azure)
+
+L'ensemble du pipeline est hébergé sur Azure et accessible publiquement, **rien à lancer en local**.
+
+| Composant | Service Azure | URL |
+|---|---|---|
+| Frontend React | Static Web Apps (Free SKU) | <https://lemon-smoke-08f231803.7.azurestaticapps.net> |
+| Backend FastAPI | Container Apps (image ACR) | <https://m2dc-api.proudbush-9e83dede.francecentral.azurecontainerapps.io> |
+| Functions (Blob/SB/DLQ/SignalR) | Function App Linux Node 20 | `https://m2dc-fn-gkmqb3qwlfmr4.azurewebsites.net` |
+| CI/CD frontend | GitHub Actions → SWA | `.github/workflows/azure-static-web-apps-lemon-smoke-08f231803.yml` |
+
+**Pour tester en bout-en-bout :** ouvrir l'URL Static Web Apps, sélectionner un fichier, cliquer *Envoyer*.
+Suivre la progression via le panneau "Historique" (notifications SignalR temps réel : `UPLOADED → QUEUED → PROCESSING → PROCESSED` avec tags IA).
+
+---
+
 ## 1. Architecture
 
 ```mermaid
