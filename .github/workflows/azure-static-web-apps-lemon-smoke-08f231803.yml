@@ -22,6 +22,12 @@ jobs:
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
+        env:
+          # Vite reads VITE_* env vars at build time and inlines them in the bundle.
+          # Edit these here if you re-provision the Function App or expose a public API,
+          # or override them in GitHub repo Settings > Variables > Actions.
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://api-doc-vl.azurewebsites.net' }}
+          VITE_FUNCTIONS_BASE_URL: ${{ vars.VITE_FUNCTIONS_BASE_URL || 'https://m2dc-fn-gkmqb3qwlfmr4.azurewebsites.net' }}
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_LEMON_SMOKE_08F231803 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
